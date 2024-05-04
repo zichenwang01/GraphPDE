@@ -7,13 +7,15 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 import utils
 import torch
 from glob import glob
-import torch
 import inverse_gnn
 import modules
 import gnn_module
-import dataio
+import dataio2
 import numpy as np
 from functools import partial
+
+print(2)
+
 import configargparse
 p = configargparse.ArgumentParser()
 
@@ -155,7 +157,7 @@ gnn_solver = gnn_module.mesh_PDE(edge_dim=3,node_dim=4, latent_dim = 256,num_ste
 checkpoint_gnn = torch.load(opt.solver_path,map_location='cuda:{}'.format(opt.gpu))
 gnn_solver.load_state_dict(checkpoint_gnn['model_state_dict'])
 gnn_solver = gnn_solver.to(device)
-graph_update_fn = partial(dataio.wave_data_update,('u', 'v', 'density','type'))
+graph_update_fn = partial(dataio2.wave_data_update,('u', 'v', 'density','type'))
 
 num_experiments = len(glob(os.path.join(opt.logging_root, opt.experiment_name) + 'config*'))
 p.write_config_file(opt, [os.path.join(root_path, 'config_{}.ini'.format(num_experiments))])

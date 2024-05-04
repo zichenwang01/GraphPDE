@@ -7,7 +7,7 @@ np.random.seed(seed=121)
 torch.manual_seed(121)
 from torch_geometric.data import DataLoader
 import gnn_module
-import dataio
+import dataio2
 import wandb
 import loss_fns
 import utils
@@ -116,16 +116,16 @@ model = gnn_module.mesh_PDE(edge_dim=3,node_dim=4, latent_dim = 256,num_steps=10
                                 nl='relu',var=0,batch_norm=False,normalize=True,encoder_nl='relu',diffMLP=True).cuda()
 
 print('--- Load Dataset ---')
-train_datalist = dataio.wave_data_2D_irrgular(opt.dataset_size,node_features=opt.node_features,edge_features = opt.edge_features,
+train_datalist = dataio2.wave_data_2D_irrgular(opt.dataset_size,node_features=opt.node_features,edge_features = opt.edge_features,
                                         file=opt.file,step_size=opt.step_size,endtime=opt.endtime,train=True, device=device, var=opt.noise_var)
 print(len(train_datalist))
 dataset = DataLoader(train_datalist, batch_size=opt.batch_size,shuffle=True)
-graph_update_fn = partial(dataio.wave_data_update,opt.node_features)
+graph_update_fn = partial(dataio2.wave_data_update,opt.node_features)
 
 # validation dataset sample
 val_loaders = []
 for j in range(opt.val_dataset):
-    train_datalist =dataio.wave_data_2D_irrgular(1,node_features=opt.node_features,edge_features = opt.edge_features,
+    train_datalist =dataio2.wave_data_2D_irrgular(1,node_features=opt.node_features,edge_features = opt.edge_features,
                                         file=opt.file,step_size=opt.step_size,endtime=opt.endtime,index=j, train=False, device="cpu", var=opt.noise_var)
     val_loader = DataLoader(train_datalist, batch_size=1,shuffle=False)
     val_loaders.append(val_loader)

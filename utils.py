@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torchvision.utils import make_grid, save_image
-import dataio
+print(1)
+import dataio2
+print(2)
 import skimage
 
 def cond_mkdir(path):
@@ -129,8 +131,8 @@ def summary_autodecoder(sample,latent_dim,irregular_mesh, model, model_input, gt
     model_input['coords'] = model_input['coords_fine']
     with torch.no_grad():
         model_output = model(model_input)
-    pred_img = dataio.lin2img(model_output['model_out'], image_resolution)
-    gt_img = dataio.lin2img(gt['img_fine'], image_resolution)
+    pred_img = dataio2.lin2img(model_output['model_out'], image_resolution)
+    gt_img = dataio2.lin2img(gt['img_fine'], image_resolution)
     output_vs_gt = torch.cat((gt_img, pred_img), dim=-1)
     writer.add_image(prefix + 'gt_vs_pred', make_grid(output_vs_gt, scale_each=False, normalize=True),
                      global_step=total_steps)
@@ -144,7 +146,7 @@ def summary_autodecoder(sample,latent_dim,irregular_mesh, model, model_input, gt
         latent = (torch.randn(model_output['model_out'].shape[0],latent_dim).cuda())*torch.sqrt(model.varience)+model.mean
         with torch.no_grad():
             model_output = model(model_input,latent=latent)
-        pred_img = dataio.lin2img(model_output['model_out'], image_resolution)
+        pred_img = dataio2.lin2img(model_output['model_out'], image_resolution)
         writer.add_image(prefix + 'sampled', make_grid(pred_img, scale_each=False, normalize=True),
                         global_step=total_steps)
         if wandb:

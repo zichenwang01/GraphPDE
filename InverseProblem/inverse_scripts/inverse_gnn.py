@@ -2,7 +2,7 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import dataio
+import dataio2
 import utils
 import numpy as np
 import torch
@@ -38,7 +38,7 @@ def identity(model_input,latent):
 
 def gen_dataset(file,mask=None,time_steps=2,start_with_0=False,edge_features=None,prior_type=None,gnn_solver=None,graph_update_fn=None):
     
-    train_datalist = dataio.file_dataloader(file=file,node_features=('u', 'v', 'density', 'type'),edge_features = edge_features,
+    train_datalist = dataio2.file_dataloader(file=file,node_features=('u', 'v', 'density', 'type'),edge_features = edge_features,
                                             step_size=5,endtime=250)
     if prior_type=='density':
         observed_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])

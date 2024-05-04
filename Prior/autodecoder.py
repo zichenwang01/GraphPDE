@@ -4,7 +4,7 @@ import os
 import contextlib
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append("..")
-import dataio
+import dataio2
 import utils
 import train
 import loss_fns
@@ -98,7 +98,7 @@ utils.cond_mkdir(root_path)
 # if opt.wandb:
     # wandb.init(project='prior', entity='username',name='deepsdf{}_{}_{}'.format(opt.dataset_size,opt.use_pe,opt.experiment_name))
 
-density_dataset = dataio.density(dataset_size=opt.dataset_size,sampled_points = opt.sampled_points, jitter=opt.jitter,type=opt.prior)
+density_dataset = dataio2.density(dataset_size=opt.dataset_size,sampled_points = opt.sampled_points, jitter=opt.jitter,type=opt.prior)
 dataloader = DataLoader(density_dataset, shuffle=False, batch_size=opt.batch_size, pin_memory=True, num_workers=opt.num_workers)
 
 # Define the model.
