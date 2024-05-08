@@ -25,23 +25,46 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = str(1)
 PATH = './Inverse_Problem/data_validation'
 
 
-def l2(prediction,sparse_abservation,mask,steps,obversation_step=1,start_observation_index=1):
+def l2(prediction, sparse_abservation, mask, steps, obversation_step=1, start_observation_index=1):
     number_of_observation = sparse_abservation[start_observation_index:steps+1:obversation_step].shape[0]
+    
+    # print("start_observation_index",start_observation_index)
+    # print("steps",steps)
+    # print("obversation_step",obversation_step)
+    # print(sparse_abservation[start_observation_index:steps+1:obversation_step].shape)
+    # print("number_of_observation",number_of_observation)
+    
+    # print("prediction",prediction.shape)
+    # print("mask sum:",mask.sum().cpu())
+    
     return (((prediction[start_observation_index:steps+1:obversation_step,:]*mask-sparse_abservation[start_observation_index:steps+1:obversation_step,:])**2).sum(dim=1)).sum()/mask.sum()/number_of_observation
 
-def l1(prediction,sparse_abservation,mask,steps,obversation_step=1,start_observation_index=1):
+def l1(prediction, sparse_abservation, mask, steps, obversation_step=1, start_observation_index=1):
     number_of_observation = sparse_abservation[start_observation_index:steps+1:obversation_step].shape[0]
-    return (((prediction[start_observation_index:steps+1:obversation_step,:]*mask-sparse_abservation[start_observation_index:steps+1:obversation_step,:]).abs()).sum(dim=1)).sum()/mask.sum()/number_of_observation
+    
+    # print("number_of_observation",number_of_observation)
+    # print("mask sum",mask.sum())
+    
+    return (((prediction[start_observation_index:steps+1:obversation_step,:] * mask - sparse_abservation[start_observation_index:steps+1:obversation_step,:]).abs()).sum(dim=1)).sum() / mask.sum() / number_of_observation
 
-def identity(model_input,latent):
+def identity(model_input, latent):
     return {'model_out':latent}
 
-def gen_dataset(file,mask=None,time_steps=2,start_with_0=False,edge_features=None,prior_type=None,gnn_solver=None,graph_update_fn=None):
+def gen_dataset(
+    file, mask=None, 
+    time_steps=2, start_with_0=False, edge_features=None, 
+    prior_type=None, gnn_solver=None, graph_update_fn=None
+):
+    # load Data at various time steps
+    train_datalist = dataio2.file_dataloader(
+        file=file, node_features=('u', 'v', 'density', 'type'), edge_features = edge_features, step_size=5, endtime=250
+    )
+    print('time_steps:', time_steps)
+    print('len of train_datalist:', len(train_datalist))
     
-    train_datalist = dataio2.file_dataloader(file=file,node_features=('u', 'v', 'density', 'type'),edge_features = edge_features,
-                                            step_size=5,endtime=250)
     if prior_type=='density':
         observed_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
+        
         gt_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
         for idx,graph in enumerate(train_datalist):
             observed_g = graph.clone()
@@ -56,45 +79,97 @@ def gen_dataset(file,mask=None,time_steps=2,start_with_0=False,edge_features=Non
             gt_fields[idx+1,:] = (graph.gt).permute(1,0).float()
             if idx>=time_steps-1: 
                 break
+            
     elif prior_type=='init_state':
+        # initialize
         observed_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
         gt_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
-        for idx,graph in enumerate(train_datalist):
+        print("observed_fields",observed_fields.shape)
+        
+        for idx, graph in enumerate(train_datalist):
             observed_g = graph.clone()
-            if idx==0:
+            if idx == 0:
                 gt_parameter = observed_g.x[:,0].clone()
                 gt_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
                 observed_g.x[:,0] = (observed_g.x[:,0]*mask) #observed points
                 observed_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
                 observed_g.x[:,0] = 0            # remove init states
-                init_graph=observed_g.clone()    # if idx==0, init graph
+                init_graph = observed_g.clone()    # if idx==0, init graph
+              
+            # read ground truth data  
             gt_fields[idx+1,:] = (graph.gt).permute(1,0).float()
-            observed_g.gt[:,0]= observed_g.gt[:,0]*mask  # mask out observation points
-            observed_fields[idx+1,:] = (observed_g.gt).permute(1,0).float() #store it in observed_fields
+            # mask out observation points
+            observed_g.gt[:,0] = observed_g.gt[:,0] * mask  
+            #store it in observed_fields
+            observed_fields[idx+1,:] = (observed_g.gt).permute(1,0).float() 
+            
             if idx>=time_steps-1: 
                 break
-    return init_graph, observed_fields,gt_parameter,gt_fields
+            
+    # # CUSTOM EDITION
+    # elif prior_type=='init_state':
+    #     # initialize
+    #     observed_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
+    #     gt_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
+    #     print("observed_fields",observed_fields.shape)
+        
+    #     for idx, graph in enumerate(train_datalist):
+    #         observed_g = graph.clone()
+    #         if idx == 0:
+    #             gt_parameter = observed_g.x[:,0].clone()
+    #             gt_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
+    #             observed_g.x[:,0] = (observed_g.x[:,0]*mask) #observed points
+    #             observed_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
+    #             observed_g.x[:,0] = 0            # remove init states
+    #             init_graph = observed_g.clone()    # if idx==0, init graph
+              
+    #         # read ground truth data  
+    #         gt_fields[idx+1,:] = (graph.gt).permute(1,0).float()
+    #         # mask out observation points
+    #         observed_g.gt[:,0] = observed_g.gt[:,0] * mask  
+    #         #store it in observed_fields
+    #         observed_fields[idx+1,:] = (observed_g.gt).permute(1,0).float() 
+            
+    #         if idx>=time_steps-1: 
+    #             break
+    
+    # print("observed_fields", observed_fields)
+    print('observed_fields shape:', observed_fields.shape)
+    # print('gt_parameter:', gt_parameter)
+    print('gt_parameter shape:', gt_parameter.shape)
+    
+    return init_graph, observed_fields, gt_parameter, gt_fields
 
-def gen_mask(coords,mask_type="random",mask_percent=0,resolution=128,bdd_nodes=None,index=0,path_to_data=None):
+def gen_mask(coords, mask_type="random", mask_percent=0, resolution=128, bdd_nodes=None, index=0, path_to_data=None):
+    
+    # print("path_to_data",path_to_data)
+    
     if mask_type=="random_nodes":
+        print("----- Generating mask from random nodes -----")
+        print("mask percent: ",mask_percent)
+        
         n = coords.shape[0]
         if isinstance(mask_percent,int):
             masked_num = mask_percent
         else:
-            masked_num = int(mask_percent*n)
-        masked_index=torch.randperm(n)[0:masked_num]
+            masked_num = int(mask_percent * n)
+        masked_index = torch.randperm(n)[0:masked_num]
         mask = torch.zeros(n)
-        mask.view(-1)[masked_index]=1
+        mask.view(-1)[masked_index] = 1
+        
     elif mask_type=="load":
-        sensor_coords = np.load('{}/data_validation/data/random_coords/{}/{}.npy'.format(path_to_data,mask_percent,index),allow_pickle=True)
-        assert sensor_coords.shape[0]==mask_percent
+        print("----- Loading mask from file -----")
+        
+        sensor_coords = np.load('{}/data_validation/data/random_coords/{}/{}.npy'.format(path_to_data, mask_percent, index), allow_pickle=True)
+        
+        assert sensor_coords.shape[0] == mask_percent
         tree = spatial.KDTree(coords)
         a = tree.query(sensor_coords)
         mask = np.zeros(coords.shape[0])
         mask[a[1][:]]=1
         masked_index = a[1][:]
         mask = torch.tensor(mask)
-    return mask,masked_index,coords[masked_index]
+    return mask, masked_index, coords[masked_index]
 
 def gnn_update_density(prior,gnn_solver,model_input,latent,time_steps,init_graph,n,graph_update_fn,noprior=False,device="cuda"):
     for t in range(time_steps):
@@ -136,21 +211,35 @@ def gnn_update_init_state(prior,gnn_solver,model_input,latent,time_steps,init_gr
         input_graph = graph_update_fn(output_graph,input_graph_clone,train=False,keep_grad=True)
     return  prediction, ploted_graph
 
-def setup_inverseProblem(time_steps,data_file=None,mask_percent=0,plot=False,mask_type="random",index=0,start_with_0=False,path_to_data=None,
-                         gpu_num=0,edge_features=None,prior_type=None,resolution=128,gnn_solver=None,graph_update_fn=None,device="cuda"):
+def setup_inverseProblem(
+    time_steps, data_file=None, mask_percent=0, plot=False, mask_type="random", index=0, start_with_0=False, path_to_data=None,
+    gpu_num=0, edge_features=None, prior_type=None, resolution=128, gnn_solver=None, graph_update_fn=None, device="cuda"
+):
+    # data file path
     data_file = sorted(glob('{}/*.npy'.format(data_file)))[index]
     
+    # coords are coordinates of mesh vertices in the unit square
     coords = np.load(data_file,allow_pickle=True)[0]['nodes_low']
-    bdd_nodes = np.load(data_file,allow_pickle=True)[0]['is_boundary_low']
-    mask,mask_idx,sensor_coords = gen_mask(coords,mask_percent=mask_percent,mask_type=mask_type,resolution=resolution,bdd_nodes=bdd_nodes,index=index,path_to_data=path_to_data)
     
+    # bdd_nodes is a grid of True/False indicating boundary nodes
+    bdd_nodes = np.load(data_file,allow_pickle=True)[0]['is_boundary_low']
+    
+    # mask is a tensor of 0/1s indicating masked nodes
+    # mask_idx are indices of masked nodes
+    # sensor_coords are coordinates of masked nodes
+    mask, mask_idx, sensor_coords = gen_mask(
+        coords, mask_percent=mask_percent, mask_type=mask_type, resolution=resolution, bdd_nodes=bdd_nodes, index=index, path_to_data=path_to_data
+    )
+    
+    # put coords into model
     coords = torch.tensor(coords).unsqueeze(0).float().to(device)
     model_input = {'coords':coords}
 
-    
-    init_graph,sparse_abservation,gt_parameter,gt_fields= gen_dataset(file=data_file,time_steps=time_steps,mask=mask,
-                                                                    start_with_0=start_with_0,edge_features=edge_features,
-                                                                    prior_type=prior_type,gnn_solver=gnn_solver,graph_update_fn=graph_update_fn)
+    init_graph, sparse_abservation, gt_parameter, gt_fields = gen_dataset(
+        file=data_file, time_steps=time_steps, mask=mask,
+        start_with_0=start_with_0, edge_features=edge_features,
+        prior_type=prior_type, gnn_solver=gnn_solver, graph_update_fn=graph_update_fn
+    )
 
     if plot:
         plot_input_graph(init_graph)
@@ -160,30 +249,32 @@ def setup_inverseProblem(time_steps,data_file=None,mask_percent=0,plot=False,mas
         plt.triplot(coords[:,0],coords[:,1],cells,linewidth=0.1)
         plt.title("input_u")
         
-    return init_graph,sparse_abservation, mask,mask_idx, gt_parameter,model_input,gt_fields,sensor_coords
+    return init_graph, sparse_abservation, mask, mask_idx, gt_parameter, model_input, gt_fields, sensor_coords
 
 
-def solver_invserproblem(prior,gnn_solver,graph_update_fn,time_steps,mask_percent=1,num_iter=1000,lr=4e-3,mask_type="load",seed=42,index=0,lr_decay=0.8,lr_decay_steps=100,
-                         log_path=None,data_file=None,store=False,start_with_0=False,edge_features=None,prior_type=None,resolution=128,
-                         noprior=False,loss_weight=None,loss_fn=None,progressive=False,convergence_stop=False,path_to_data=None,obversation_step=1,
-                         start_observation_index=1,gradient_clip=0,lr_decay_type="per_iter",reg = 0,device="cuda",repeat_time=120):
+def solver_invserproblem(
+    prior, gnn_solver, graph_update_fn, 
+    time_steps, mask_percent=1, num_iter=1000, lr=4e-3, mask_type="load", seed=42, index=0, lr_decay=0.8, lr_decay_steps=100, log_path=None, data_file=None, store=False, start_with_0=False, edge_features=None, prior_type=None, resolution=128, noprior=False, loss_weight=None, loss_fn=None, progressive=False, convergence_stop=False, path_to_data=None, obversation_step=1, start_observation_index=1, gradient_clip=0, lr_decay_type="per_iter", reg = 0, device="cuda", repeat_time=120
+):
     
-    init_graph,sparse_abservation, mask,mask_idx, gt_parameter,model_input,gt_fields,sensor_coords= setup_inverseProblem(time_steps,
-                                                    data_file=data_file,mask_percent=mask_percent,mask_type=mask_type,index=index,
-                                                    start_with_0=start_with_0,edge_features=edge_features,prior_type=prior_type
-                                                    ,resolution=resolution,gnn_solver=gnn_solver,graph_update_fn=graph_update_fn,path_to_data=path_to_data,device=device)
+    init_graph, sparse_abservation, mask, mask_idx, gt_parameter, model_input, gt_fields, sensor_coords = setup_inverseProblem(
+        time_steps, data_file=data_file, mask_percent=mask_percent, mask_type=mask_type, index=index, start_with_0=start_with_0, edge_features=edge_features, prior_type=prior_type, resolution=resolution, gnn_solver=gnn_solver, graph_update_fn=graph_update_fn, path_to_data=path_to_data, device=device
+    )
+    
+    print("init_graph: ", init_graph)
+    
     n = sparse_abservation.shape[1]
     mask = mask.to(device)
     sparse_abservation = sparse_abservation.to(device)
     if prior_type == "init_state":
-            vert = init_graph.coords
-            tri = init_graph.cell
-            mesh,_,_= gen_mesh(vert,tri)
-            bdd_mask = solve_Eikonal(mesh)
-            bdd_mask = (bdd_mask.compute_vertex_values()**0.8)/((bdd_mask.compute_vertex_values()**0.8).max())
-            bdd_mask = torch.tensor(bdd_mask).to(device)
+        vert = init_graph.coords
+        tri = init_graph.cell
+        mesh,_,_= gen_mesh(vert,tri)
+        bdd_mask = solve_Eikonal(mesh)
+        bdd_mask = (bdd_mask.compute_vertex_values()**0.8)/((bdd_mask.compute_vertex_values()**0.8).max())
+        bdd_mask = torch.tensor(bdd_mask).to(device)
             
-    image_path = ("{}/images/{}/sensor_num_{}_timesteps{}_{}_{}".format(log_path,index,mask_percent,time_steps,mask_type,seed))
+    image_path = ("{}/images/{}/sensor_num_{}_timesteps{}_{}_{}".format( log_path, index, mask_percent, time_steps, mask_type,seed))
     utils.cond_mkdir(image_path)
     
     #init latent code
@@ -231,14 +322,16 @@ def solver_invserproblem(prior,gnn_solver,graph_update_fn,time_steps,mask_percen
 
     for i in range(num_iter):
         if prior_type=="density":
-            prediction,ploted_graph = gnn_update_density(prior,gnn_solver,model_input,density.density_parameter,steps[i],init_graph,n,graph_update_fn,noprior=noprior,device=device)
+            prediction, ploted_graph = gnn_update_density(prior,gnn_solver,model_input,density.density_parameter,steps[i],init_graph,n,graph_update_fn,noprior=noprior,device=device)
             target_index = 2
         elif prior_type=="init_state":
-            prediction,ploted_graph = gnn_update_init_state(prior,gnn_solver,model_input,density.density_parameter,steps[i],init_graph,n,graph_update_fn,bdd_mask,noprior=noprior,device=device)
+            prediction, ploted_graph = gnn_update_init_state(
+                prior,gnn_solver, model_input, density.density_parameter, steps[i], init_graph, n, graph_update_fn, bdd_mask, noprior=noprior, device=device
+            )
             target_index = 0
             
         predictions.append(prediction)
-        loss = loss_fn(prediction,sparse_abservation,mask,steps[i],obversation_step,start_observation_index=start_observation_index)
+        loss = loss_fn(prediction, sparse_abservation, mask, steps[i], obversation_step, start_observation_index=start_observation_index)
         loss = loss + reg*((density.density_parameter)**2).mean()
 
         assert loss!=0
@@ -258,7 +351,7 @@ def solver_invserproblem(prior,gnn_solver,graph_update_fn,time_steps,mask_percen
             if not(if_continue(sum(losses[-50:])/len(losses[-50:]),losses[-2])):
                 break
         
-        if i%500==0:
+        if i % 500 == 0:
             print('iter:',i)
             print('loss:{}'.format(loss))
             print('mse:{}'.format(((ploted_graph.x[:,target_index].detach().cpu()-gt_parameter)**2).mean()))
@@ -319,36 +412,59 @@ def solver_invserproblem(prior,gnn_solver,graph_update_fn,time_steps,mask_percen
     return mse[-1],dict,sensor_coords,mse
                 
 
-def test_inverse(start_index=0, dataset_size=1, prior=None,gnn_solver=None,graph_update_fn=None,mask_type=None,time_steps=None,
-                 sensor_num=None,num_iter=1000,lr=1e-2,lr_decay=0.9,lr_decay_steps=500,log_path=None,store=False,
-                 data_file=None,start_with_0=False,edge_features=None,prior_type=None,resolution=128,noprior=False,loss_fn=None,progressive=False,
-                 convergence_stop=False,path_to_data=None,obversation_step=1,start_observation_index=1,gradient_clip=0,
-                 lr_decay_type = "per_iter",reg=0,device="cuda",repeat_time=0):
+def test_inverse(
+    start_index=0, dataset_size=1, 
+    prior=None, gnn_solver=None, graph_update_fn=None, 
+    mask_type=None, time_steps=None, sensor_num=None, 
+    num_iter=1000, lr=1e-2, lr_decay=0.9, lr_decay_steps=500, 
+    log_path=None, store=False, data_file=None, start_with_0=False, edge_features=None, prior_type=None, resolution=128, noprior=False, loss_fn=None, progressive=False,
+    convergence_stop=False, path_to_data=None, obversation_step=1, start_observation_index=1, gradient_clip=0,
+    lr_decay_type = "per_iter", reg=0, device="cuda", repeat_time=0
+):
     
-    mse_vs_time = []
     seed = 1
+    mse_vs_time = []
     for count_sample,index in enumerate(range(start_index,start_index+dataset_size)):
-        for idx,t in enumerate(time_steps):
+        for idx,t in enumerate(time_steps):            
+            # set seed
             seed_everything(seed)
-            loss_value, dict,sensor_coords, mse = solver_invserproblem(prior,gnn_solver,graph_update_fn,t,mask_percent=sensor_num,lr=lr,num_iter=num_iter,mask_type=mask_type,
-                                                                    seed=seed,index=index,lr_decay=lr_decay,lr_decay_steps=lr_decay_steps,store=store,
-                                                                    log_path=log_path,data_file=data_file,start_with_0=start_with_0,progressive=progressive,
-                                                                    edge_features=edge_features,prior_type=prior_type,resolution=resolution,noprior=noprior,
-                                                                    loss_fn=loss_fn,convergence_stop=convergence_stop,path_to_data=path_to_data,obversation_step=obversation_step,
-                                                                    start_observation_index = start_observation_index,gradient_clip=gradient_clip,lr_decay_type=lr_decay_type,
-                                                                    reg=reg,device=device,repeat_time=repeat_time)            
+            
+            # solve inverse problem
+            loss_value, dict, sensor_coords, mse = solver_invserproblem(
+                prior, gnn_solver, graph_update_fn, # models
+                t, num_iter=num_iter, # iterations
+                lr=lr, lr_decay=lr_decay, # lr
+                lr_decay_steps=lr_decay_steps, lr_decay_type=lr_decay_type,
+                mask_percent=sensor_num, mask_type=mask_type, # mask
+                seed=seed, index=index, store=store,
+                log_path=log_path, data_file=data_file, start_with_0=start_with_0, progressive=progressive,
+                edge_features=edge_features, prior_type=prior_type, resolution=resolution, noprior=noprior,
+                loss_fn=loss_fn, convergence_stop=convergence_stop, path_to_data=path_to_data, obversation_step=obversation_step,
+                start_observation_index=start_observation_index, gradient_clip=gradient_clip, 
+                reg=reg, device=device, repeat_time=repeat_time
+            )      
+            
+            # record mse and time      
             mse_vs_time.append({'mse': mse, "time_steps": time_steps})
             
             if store:
-                hf = h5py.File('{}/losses_{}_{}_{}.h5'.format(log_path,sensor_num,t,noprior), 'a')
+                # write loss as h5
+                hf = h5py.File('{}/losses_{}_{}_{}.h5'.format(log_path, sensor_num, t, noprior), 'a')
                 g1 = hf.create_group('{}'.format(index))
                 g1.create_dataset("loss", data=loss_value)       
                 hf.close()
-                np.save('{}/individual_npy/dict_{}.npy'.format(log_path,index),dict)
-                f= open("{}/summary.txt".format(log_path),"a+")
-                content = str([index,loss_value])
+                
+                # write loss as txt
+                f = open("{}/summary.txt".format(log_path), "a+")
+                content = str([index, loss_value])
                 f.write(content)
                 f.write(" \n")
+                
+                # write dict
+                np.save(f'{log_path}/individual_npy/dict_{index}.npy', dict)
+                print('log_path:', log_path)
+                print('dict:', dict)
+                
 
 def seed_everything(seed: int):
     import random, os

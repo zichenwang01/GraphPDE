@@ -1,9 +1,7 @@
-print(1)
 # from pyg.data import Data, DataLoader, Dataset
 from torch_geometric.data import Data, DataLoader, Dataset
 # from torch_geometric.data import Data
 # from torch.utils.data import DataLoader, Dataset
-print(2)
 import torch
 import numpy as np
 

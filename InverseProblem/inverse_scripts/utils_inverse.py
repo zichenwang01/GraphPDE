@@ -62,15 +62,15 @@ def if_continue(loss1,loss2,criteria=1e-10):
     else:
         return True
 
-def plot_input_graph(graph,extra=None,plot_fields=False,mask_idx=None,):
-    if extra==None:
+def plot_input_graph(graph, extra=None, plot_fields=False, mask_idx=None,):
+    if extra == None:
         num_fig = 4
         rownumber = 1
     else:
         rownumber = 1
-        num_fig = 4+len(extra)
+        num_fig = 4 + len(extra)
     if num_fig>5:
-        rownumber = int(num_fig/5)+1
+        rownumber = int(num_fig/5) + 1
         num_fig = 5
    
     coords = graph.coords
@@ -102,7 +102,7 @@ def plot_input_graph(graph,extra=None,plot_fields=False,mask_idx=None,):
     plt.colorbar()
     plt.title("input boundary nodes")
     
-    for idx,element in enumerate(extra):
+    for idx, element in enumerate(extra):
         element = element.detach().cpu().numpy()
         fig.add_subplot(rownumber,num_fig,4+idx+1)
         if idx==0:
