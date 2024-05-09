@@ -24,7 +24,7 @@ wget https://data.pyg.org/whl/torch-1.10.0%2Bcu113/torch_sparse-0.6.12-cp37-cp37
 pip install torch_sparse-0.6.12-cp37-cp37m-linux_x86_64.whl
 wget https://data.pyg.org/whl/torch-1.10.0%2Bcu113/torch_spline_conv-1.2.1-cp37-cp37m-linux_x86_64.whl
 pip install torch_spline_conv-1.2.1-cp37-cp37m-linux_x86_64.whl
-pip install torch-geometric
+pip install torch-geometric==2.0.4
 ```
 ## Solve Inverse Problem
 Dataset and pretrained model and validation samples can be download [here](https://drive.google.com/file/d/1FnOYE2TThb6QCgDIkaBw0CGQN7D0scbu/view?usp=sharing). Unzip the data.zip folder in the root directory.
