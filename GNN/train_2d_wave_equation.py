@@ -93,8 +93,8 @@ p.add_argument('--gpu', type=int, default=2, help='which gpu to use')
 opt = p.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu)
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-torch.cuda.set_device(opt.gpu)
-device = "cuda:{}".format(opt.gpu)
+torch.cuda.set_device(0)
+device = "cuda:{}".format(0)
 print('--- Run Configuration ---')
 
 
