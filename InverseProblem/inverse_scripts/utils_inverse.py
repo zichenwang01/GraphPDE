@@ -3,7 +3,7 @@ import os
 import h5py
 # from dolfinx import *
 from dolfin import *
-import dataio2
+import dataio
 sys.path.append("..")
 import numpy as np
 import torch

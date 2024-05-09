@@ -2,7 +2,7 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import dataio2
+import dataio
 import utils
 import numpy as np
 import torch
@@ -55,52 +55,70 @@ def gen_dataset(
     time_steps=2, start_with_0=False, edge_features=None, 
     prior_type=None, gnn_solver=None, graph_update_fn=None
 ):
-    # load Data at various time steps
-    train_datalist = dataio2.file_dataloader(
+    # load graph Data at various time steps
+    train_datalist = dataio.file_dataloader(
         file=file, node_features=('u', 'v', 'density', 'type'), edge_features = edge_features, step_size=5, endtime=250
     )
     print('time_steps:', time_steps)
     print('len of train_datalist:', len(train_datalist))
     
     if prior_type=='density':
-        observed_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
+        # initialize
+        # num_nodes is the number of nodes in the mesh
+        # gt_fields is a tensor of shape timestep * num_nodes
+        num_nodes = train_datalist[0].x.shape[0]
+        gt_fields = torch.zeros(time_steps + 1, num_nodes)
+        observed_fields = torch.zeros(time_steps + 1, num_nodes)
         
-        gt_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
-        for idx,graph in enumerate(train_datalist):
+        for idx, graph in enumerate(train_datalist):
             observed_g = graph.clone()
             gt_parameter = observed_g.x[:,2].clone()
-            observed_g.x[:,2] = 0 #set density to 0
-            if idx==0:
-                init_graph=observed_g.clone()    # if idx==0, init graph
+            observed_g.x[:,2] = 0 # set density to 0
+            
+            if idx == 0:
+                init_graph = observed_g.clone()    # if idx==0, init graph
                 observed_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
                 gt_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
-            observed_g.gt[:,0]= observed_g.gt[:,0]*mask  # mask out observation points
-            observed_fields[idx+1,:] = (observed_g.gt).permute(1,0).float() #store it in observed_fields
-            gt_fields[idx+1,:] = (graph.gt).permute(1,0).float()
-            if idx>=time_steps-1: 
+            
+            # read ground truth field
+            gt_fields[idx+1,:] = (graph.gt).permute(1,0).float()   
+            
+            # read observation field 
+            observed_g.gt[:,0] = observed_g.gt[:,0] * mask 
+            observed_fields[idx+1,:] = (observed_g.gt).permute(1,0).float() 
+            
+            if idx >= time_steps - 1: 
                 break
             
     elif prior_type=='init_state':
         # initialize
-        observed_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
-        gt_fields = torch.zeros(time_steps+1,train_datalist[0].x.shape[0])
+        num_nodes = train_datalist[0].x.shape[0]
+        observed_fields = torch.zeros(time_steps + 1, num_nodes)
+        gt_fields = torch.zeros(time_steps + 1, num_nodes)
         print("observed_fields",observed_fields.shape)
         
         for idx, graph in enumerate(train_datalist):
             observed_g = graph.clone()
+            
+            # read init graph
             if idx == 0:
+                # gt_parameter is the density field
                 gt_parameter = observed_g.x[:,0].clone()
+                
+                # read initial observation field
                 gt_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
                 observed_g.x[:,0] = (observed_g.x[:,0]*mask) #observed points
                 observed_fields[0,:] = observed_g.x[:,[0]].permute(1,0).float()
                 observed_g.x[:,0] = 0            # remove init states
-                init_graph = observed_g.clone()    # if idx==0, init graph
+                
+                # init_graph is the initial graph Data
+                init_graph = observed_g.clone() 
               
-            # read ground truth data  
+            # read ground truth field  
             gt_fields[idx+1,:] = (graph.gt).permute(1,0).float()
-            # mask out observation points
+            
+            # read observation field
             observed_g.gt[:,0] = observed_g.gt[:,0] * mask  
-            #store it in observed_fields
             observed_fields[idx+1,:] = (observed_g.gt).permute(1,0).float() 
             
             if idx>=time_steps-1: 
@@ -132,11 +150,6 @@ def gen_dataset(
             
     #         if idx>=time_steps-1: 
     #             break
-    
-    # print("observed_fields", observed_fields)
-    print('observed_fields shape:', observed_fields.shape)
-    # print('gt_parameter:', gt_parameter)
-    print('gt_parameter shape:', gt_parameter.shape)
     
     return init_graph, observed_fields, gt_parameter, gt_fields
 

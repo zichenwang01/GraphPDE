@@ -1,5 +1,6 @@
 import sys
 import os
+os.environ["LD_LIBRARY_PATH"] = "/home/zzzichen/anaconda3/envs/gnn1/lib"
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"inverse_scripts"))
@@ -10,7 +11,7 @@ from glob import glob
 import inverse_gnn
 import modules
 import gnn_module
-import dataio2
+import dataio
 import numpy as np
 from functools import partial
 
@@ -240,7 +241,7 @@ print('gnn path:', opt.solver_path)
 
 # load graph update function
 graph_update_fn = partial(
-    dataio2.wave_data_update,
+    dataio.wave_data_update,
     ('u', 'v', 'density','type')
 )
 
