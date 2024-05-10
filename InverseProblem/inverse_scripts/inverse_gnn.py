@@ -375,7 +375,7 @@ def solver_invserproblem(
                 plot_input_graph(ploted_graph,[gt_parameter],mask_idx=mask_idx)
                 plt.savefig("{}/{}.jpg".format(image_path,i))
 
-                plt.show()
+                # plt.show()
         if lr_decay_type == "per_iter":
             if i%lr_decay_steps==0 and i!=0:
                 scheduler.step()
