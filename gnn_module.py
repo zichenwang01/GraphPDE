@@ -148,8 +148,11 @@ class mesh_PDE(torch.nn.Module):
 class normalizer(nn.Module):
     def __init__(self, dim, mean=0, std=1e-8, max_acc = 60*600):
         super().__init__()
+        print("dim: ",dim)
         self.acc_sum = nn.Parameter(torch.zeros(dim).cuda(),requires_grad=False)
+        print("acc_sum: ",self.acc_sum.shape)
         self.acc_sum_squared = nn.Parameter(torch.zeros(dim).cuda(),requires_grad=False)
+        print("acc_sum_squared: ",self.acc_sum_squared.shape)
         self.mean = nn.Parameter(torch.zeros(dim).cuda(),requires_grad=False)
         self.std = nn.Parameter(torch.ones(dim).cuda(),requires_grad=False)
         
