@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 class wave_data_2D_irrgular(Dataset):
-    def __init__(self, num_trajectory=1,node_features=['u','v','density','type'],
+    def __init__(self, num_trajectory=1,node_features=['u','v','type'],
                     edge_features = ['dist','direction'],file=None,train=True,endtime=-1,
                     step_size=1,index=0, device="cuda:0",var=0):
         super(wave_data_2D_irrgular, self).__init__()
@@ -43,7 +43,6 @@ class wave_data_2D_irrgular(Dataset):
         self.step_size = step_size
         self.trajectory_dataset = trajectory[index:num_trajectory+index]
         self.node_features = node_features
-        print(self.node_features)
         self.edge_features = edge_features
         self.num_timesteps_pertraj = self.trajectory_dataset[0]['solution_low'][0:self.endtime:self.step_size].shape[0]-1        
         self.device = device
@@ -116,7 +115,6 @@ class wave_data_2D_irrgular(Dataset):
         input_node_features['v_gt_eval'] = (U_eval[i+1:i+1+1,:]-U_eval[i:i+1,:]).permute(1,0)
         input_node_features['a_gt'] = input_node_features['v_gt'] - input_node_features['v'] 
         input_node_features['a_gt_eval'] = input_node_features['v_gt_eval'] - input_node_features['v_eval'] 
-        print(self.node_features[0])
         x = input_node_features[self.node_features[0]].float().to(self.device)
         for feature in self.node_features[1:]:
             x = torch.cat([x,input_node_features[feature].to(self.device)],dim=-1).float()
