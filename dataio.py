@@ -53,6 +53,7 @@ class wave_data_2D_irrgular(Dataset):
 
     def get(self, idx):
         trajnum = int(np.floor(idx/self.num_timesteps_pertraj))
+        print(trajnum)
         traj = self.trajectory_dataset[trajnum]
         U_solution = torch.tensor(traj['solution_low'][0:self.endtime:self.step_size])
         _,num_nodes = U_solution.shape
