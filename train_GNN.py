@@ -53,6 +53,8 @@ def train(model, train_dataloader, val_loader, epochs=5000, lr=1e-5, epochs_til_
                 start_time = time.time()
                 # data = train_dataloader.ask(j).clone()
                 data = data.cuda()
+                print(data.x.shape)
+                print(data)
                 
                 optim.zero_grad()
                 train_loss = 0.
