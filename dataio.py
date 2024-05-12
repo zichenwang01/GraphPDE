@@ -53,7 +53,6 @@ class wave_data_2D_irrgular(Dataset):
 
     def get(self, idx):
         trajnum = int(np.floor(idx/self.num_timesteps_pertraj))
-        print(trajnum)
         traj = self.trajectory_dataset[trajnum]
         U_solution = torch.tensor(traj['solution_low'][0:self.endtime:self.step_size])
         _,num_nodes = U_solution.shape
@@ -116,7 +115,7 @@ class wave_data_2D_irrgular(Dataset):
         input_node_features['v_gt_eval'] = (U_eval[i+1:i+1+1,:]-U_eval[i:i+1,:]).permute(1,0)
         input_node_features['a_gt'] = input_node_features['v_gt'] - input_node_features['v'] 
         input_node_features['a_gt_eval'] = input_node_features['v_gt_eval'] - input_node_features['v_eval'] 
-
+        print(self.node_features[0])
         x = input_node_features[self.node_features[0]].float().to(self.device)
         for feature in self.node_features[1:]:
             x = torch.cat([x,input_node_features[feature].to(self.device)],dim=-1).float()
