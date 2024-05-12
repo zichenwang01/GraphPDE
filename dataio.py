@@ -43,6 +43,7 @@ class wave_data_2D_irrgular(Dataset):
         self.step_size = step_size
         self.trajectory_dataset = trajectory[index:num_trajectory+index]
         self.node_features = node_features
+        print(self.node_features)
         self.edge_features = edge_features
         self.num_timesteps_pertraj = self.trajectory_dataset[0]['solution_low'][0:self.endtime:self.step_size].shape[0]-1        
         self.device = device
