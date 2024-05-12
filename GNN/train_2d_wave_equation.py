@@ -49,7 +49,7 @@ p.add_argument('--diffMLP', action='store_true', default=False,
 p.add_argument('--time_steps', type=int, default=1)
 p.add_argument('--out_features', type=int, default=1)
 
-p.add_argument('--node_features', type=str, default=['u','v','type'])
+p.add_argument('--node_features', type=str, default=['u','v', 'density', 'type'])
 p.add_argument('--edge_features', nargs='+', type=str, default=['dist','direction'])
 p.add_argument('--output', type=str, default='v',
                choices=['x', 'v', 'a'],
